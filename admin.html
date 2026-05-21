@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · FitStart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #E53935; --red-dk: #B71C1C;
+      --bg: #0D0D0D; --card: #1E1E1E; --card2: #252525;
+      --border: #2A2A2A; --text: #FFFFFF; --muted: #9E9E9E;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    #loadingScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+
+    header { background: rgba(13,13,13,0.95); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .header-logo { font-size: 20px; font-weight: 900; }
+    .header-logo .accent { color: var(--red); }
+    .admin-badge { background: rgba(229,57,53,0.15); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; margin-left: 10px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .btn-logout { background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .stat-card .num { font-size: 36px; font-weight: 900; color: var(--red); line-height: 1; margin-bottom: 6px; }
+    .stat-card .lbl { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+    /* Search */
+    .search-wrap { margin-bottom: 20px; }
+    .search-input { width: 100%; padding: 13px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 15px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; }
+    .search-input:focus { border-color: var(--red); }
+    .search-input::placeholder { color: #444; }
+
+    /* Table */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .table-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .table-header h2 { font-size: 16px; font-weight: 800; }
+    .user-count { font-size: 13px; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 12px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 14px 20px; font-size: 14px; vertical-align: middle; }
+
+    .user-avatar { width: 34px; height: 34px; border-radius: 10px; background: rgba(229,57,53,0.2); color: var(--red); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .user-cell { display: flex; align-items: center; gap: 12px; }
+    .user-name-cell { font-weight: 700; }
+    .user-email-cell { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .status-active { background: rgba(76,175,80,0.15); color: #81c784; border: 1px solid rgba(76,175,80,0.3); }
+    .status-expired { background: rgba(229,57,53,0.15); color: #e57373; border: 1px solid rgba(229,57,53,0.3); }
+    .status-paid { background: rgba(33,150,243,0.15); color: #64b5f6; border: 1px solid rgba(33,150,243,0.3); }
+
+    .btn-toggle { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; border: 1px solid; }
+    .btn-activate { background: rgba(33,150,243,0.1); color: #64b5f6; border-color: rgba(33,150,243,0.3); }
+    .btn-activate:hover { background: rgba(33,150,243,0.2); }
+    .btn-deactivate { background: rgba(229,57,53,0.1); color: #e57373; border-color: rgba(229,57,53,0.3); }
+    .btn-deactivate:hover { background: rgba(229,57,53,0.2); }
+
+    .empty-state { text-align: center; padding: 60px 24px; color: var(--muted); }
+    .no-access { text-align: center; padding: 80px 24px; }
+    .no-access h2 { font-size: 24px; font-weight: 900; margin-bottom: 10px; color: var(--red); }
+    .no-access p { color: var(--muted); margin-bottom: 24px; }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      header { padding: 12px 16px; }
+      .container { padding: 20px 16px; }
+      table { font-size: 13px; }
+      thead th, tbody td { padding: 10px 12px; }
+      .user-email-cell { display: none; }
+    }
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen"><div class="spinner"></div></div>
+
+<div id="appWrap" class="hidden">
+  <header>
+    <div style="display:flex;align-items:center;">
+      <div class="header-logo">Fit<span class="accent">Start</span></div>
+      <div class="admin-badge">ADMIN</div>
+    </div>
+    <div class="header-right">
+      <span id="adminName" style="font-size:13px;color:var(--muted);font-weight:600;"></span>
+      <button class="btn-logout" onclick="logout()">Изход</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="num" id="statTotal">—</div>
+        <div class="lbl">Общо потребители</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statActive" style="color:#81c784;">—</div>
+        <div class="lbl">Активен trial</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statExpired" style="color:#e57373;">—</div>
+        <div class="lbl">Изтекъл trial</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statPaid" style="color:#64b5f6;">—</div>
+        <div class="lbl">Платени</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input class="search-input" type="text" id="searchInput" placeholder="Търси по име или имейл..." oninput="filterUsers()" />
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>Потребители</h2>
+        <span class="user-count" id="userCount"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Потребител</th>
+            <th>Регистрация</th>
+            <th>Trial</th>
+            <th>Статус</th>
+            <th>Последна активност</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state hidden">Няма намерени потребители</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyCjWzp7bo3fH87wEBWXzH8_bK61B5wXbU4",
+    authDomain: "fitstart-app-55afd.firebaseapp.com",
+    projectId: "fitstart-app-55afd",
+    storageBucket: "fitstart-app-55afd.firebasestorage.app",
+    messagingSenderId: "203416819949",
+    appId: "1:203416819949:web:04e0ae7e415243242d54e4"
+  });
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let allUsers = [];
+
+  function logout() { auth.signOut().then(() => window.location.href = 'login.html'); }
+
+  function formatDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function getTrialInfo(trialStart, isPaid) {
+    if (isPaid) return { label: 'Платен', cls: 'status-paid', daysLeft: null };
+    if (!trialStart) return { label: 'Неизвестно', cls: 'status-expired', daysLeft: 0 };
+    const d = trialStart.toDate ? trialStart.toDate() : new Date(trialStart);
+    const passed = Math.floor((Date.now() - d.getTime()) / 86400000);
+    const left = Math.max(0, 7 - passed);
+    if (left === 0) return { label: 'Изтекъл', cls: 'status-expired', daysLeft: 0 };
+    return { label: `${left} ${left === 1 ? 'ден' : 'дни'}`, cls: 'status-active', daysLeft: left };
+  }
+
+  function renderTable(users) {
+    const tbody = document.getElementById('usersTable');
+    const empty = document.getElementById('emptyState');
+    document.getElementById('userCount').textContent = `${users.length} потребители`;
+
+    if (users.length === 0) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = users.map(u => {
+      const trial = getTrialInfo(u.trialStartDate, u.isPaid);
+      const initials = (u.name || u.email || '?').charAt(0).toUpperCase();
+      return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar">${initials}</div>
+              <div>
+                <div class="user-name-cell">${u.name || '—'}</div>
+                <div class="user-email-cell">${u.email || '—'}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--muted)">${formatDate(u.createdAt)}</td>
+          <td><span class="status-badge ${trial.cls}">${trial.label}</span></td>
+          <td><span class="status-badge ${u.isPaid ? 'status-paid' : trial.daysLeft === 0 ? 'status-expired' : 'status-active'}">${u.isPaid ? 'Платен' : trial.daysLeft === 0 ? 'Изтекъл' : 'Активен'}</span></td>
+          <td style="color:var(--muted)">${formatDate(u.lastActive)}</td>
+          <td>
+            <button class="btn-toggle ${u.isPaid ? 'btn-deactivate' : 'btn-activate'}" onclick="togglePaid('${u.uid}', ${u.isPaid})">
+              ${u.isPaid ? 'Премахни платен' : 'Активирай'}
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  function updateStats(users) {
+    const now = Date.now();
+    let active = 0, expired = 0, paid = 0;
+    users.forEach(u => {
+      if (u.isPaid) { paid++; return; }
+      const d = u.trialStartDate?.toDate ? u.trialStartDate.toDate() : new Date();
+      const left = Math.max(0, 7 - Math.floor((now - d.getTime()) / 86400000));
+      if (left > 0) active++; else expired++;
+    });
+    document.getElementById('statTotal').textContent = users.length;
+    document.getElementById('statActive').textContent = active;
+    document.getElementById('statExpired').textContent = expired;
+    document.getElementById('statPaid').textContent = paid;
+  }
+
+  function filterUsers() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allUsers.filter(u =>
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+  }
+
+  async function togglePaid(uid, currentStatus) {
+    try {
+      await db.collection('users').doc(uid).update({ isPaid: !currentStatus });
+      const idx = allUsers.findIndex(u => u.uid === uid);
+      if (idx !== -1) allUsers[idx].isPaid = !currentStatus;
+      updateStats(allUsers);
+      filterUsers();
+    } catch (e) { alert('Грешка: ' + e.message); }
+  }
+
+  async function loadUsers() {
+    try {
+      const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
+      allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      updateStats(allUsers);
+      renderTable(allUsers);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('usersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);">Грешка при зареждане на данните.</td></tr>`;
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (!doc.exists || !doc.data().isAdmin) {
+        window.location.href = 'app.html'; return;
+      }
+      document.getElementById('adminName').textContent = doc.data().name || user.email;
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('appWrap').classList.remove('hidden');
+      await loadUsers();
+    } catch (e) {
+      window.location.href = 'app.html';
+    }
+  });
+</script>
+</body>
+</html>
