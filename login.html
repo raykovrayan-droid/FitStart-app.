@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Вход · FitStart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #E53935; --red-dk: #B71C1C;
+      --bg: #0D0D0D; --card: #1E1E1E;
+      --border: #2A2A2A; --text: #FFFFFF; --muted: #9E9E9E;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    nav { padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .nav-logo { font-size: 22px; font-weight: 900; text-decoration: none; color: var(--text); }
+    .nav-logo .accent { color: var(--red); }
+    .nav-back { font-size: 13px; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+    .nav-back:hover { color: var(--text); }
+
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; position: relative; }
+    main::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(229,57,53,0.1) 0%, transparent 70%); pointer-events: none; }
+
+    .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; width: 100%; max-width: 420px; position: relative; }
+
+    .tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 32px; }
+    .tab { flex: 1; padding: 10px; border-radius: 9px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.2s; font-family: 'Inter', sans-serif; }
+    .tab.active { background: var(--red); color: #fff; }
+
+    .card-title { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+    .card-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 15px; font-family: 'Inter', sans-serif; transition: border-color 0.2s; outline: none; }
+    .form-group input:focus { border-color: var(--red); }
+    .form-group input::placeholder { color: #444; }
+
+    .forgot-link { text-align: right; margin-top: -8px; margin-bottom: 16px; }
+    .forgot-link a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .forgot-link a:hover { color: var(--red); }
+
+    .btn-submit { width: 100%; padding: 15px; background: var(--red); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; font-family: 'Inter', sans-serif; margin-top: 8px; }
+    .btn-submit:hover:not(:disabled) { background: var(--red-dk); transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .error-msg { background: rgba(229,57,53,0.12); border: 1px solid rgba(229,57,53,0.3); color: #ff8a80; border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .error-msg.show { display: block; }
+    .success-msg { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.3); color: #a5d6a7; border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .success-msg.show { display: block; }
+
+    .trial-info { display: flex; align-items: center; gap: 10px; background: rgba(229,57,53,0.08); border: 1px solid rgba(229,57,53,0.2); border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; }
+    .trial-info svg { flex-shrink: 0; color: var(--red); }
+    .trial-info span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .trial-info strong { color: var(--text); }
+
+    @media (max-width: 480px) {
+      .auth-card { padding: 28px 20px; }
+      nav { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">Fit<span class="accent">Start</span></a>
+  <a class="nav-back" href="index.html">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Начало
+  </a>
+</nav>
+
+<main>
+  <div class="auth-card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Вход</button>
+      <button class="tab" onclick="switchTab('register')">Регистрация</button>
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+    <div id="successMsg" class="success-msg"></div>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <div class="card-title">Добре дошъл!</div>
+      <div class="card-sub">Влез в акаунта си</div>
+      <div class="form-group">
+        <label>Имейл</label>
+        <input type="email" id="loginEmail" placeholder="email@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Парола</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" />
+      </div>
+      <div class="forgot-link"><a href="#" onclick="resetPassword(event)">Забравена парола?</a></div>
+      <button class="btn-submit" id="loginBtn" onclick="login()">Влез</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerForm" style="display:none;">
+      <div class="card-title">Създай акаунт</div>
+      <div class="card-sub">Започни безплатно</div>
+      <div class="trial-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span><strong>7 дни безплатно</strong> — без кредитна карта. Пълен достъп до всички функции.</span>
+      </div>
+      <div class="form-group">
+        <label>Пълно име</label>
+        <input type="text" id="regName" placeholder="Иван Иванов" />
+      </div>
+      <div class="form-group">
+        <label>Имейл</label>
+        <input type="email" id="regEmail" placeholder="email@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Парола</label>
+        <input type="password" id="regPassword" placeholder="Минимум 6 символа" />
+      </div>
+      <div class="form-group">
+        <label>Потвърди паролата</label>
+        <input type="password" id="regPasswordConfirm" placeholder="••••••••" />
+      </div>
+      <button class="btn-submit" id="registerBtn" onclick="register()">Започни безплатно →</button>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyCjWrp7bo3fH87wEBWXzH8_bK61B5wXbU4",
+    authDomain: "fitstart-app-55afd.firebaseapp.com",
+    projectId: "fitstart-app-55afd",
+    storageBucket: "fitstart-app-55afd.firebasestorage.app",
+    messagingSenderId: "203416819949",
+    appId: "1:203416819949:web:04e0ae7e415243242d54e4"
+  });
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let activeTab = 'login';
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    clearMessages();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('successMsg').classList.remove('show');
+  }
+  function showSuccess(msg) {
+    const el = document.getElementById('successMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('errorMsg').classList.remove('show');
+  }
+  function clearMessages() {
+    document.getElementById('errorMsg').classList.remove('show');
+    document.getElementById('successMsg').classList.remove('show');
+  }
+
+  function setLoading(btnId, loading, defaultText) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Зарежда...' : defaultText;
+  }
+
+  async function login() {
+    clearMessages();
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    if (!email || !pass) return showError('Моля попълни всички полета.');
+    setLoading('loginBtn', true, 'Влез');
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+      window.location.href = 'app.html';
+    } catch (e) {
+      setLoading('loginBtn', false, 'Влез');
+      showError(fbError(e.code));
+    }
+  }
+
+  async function register() {
+    clearMessages();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pass = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regPasswordConfirm').value;
+    if (!name || !email || !pass || !confirm) return showError('Моля попълни всички полета.');
+    if (pass.length < 6) return showError('Паролата трябва да е поне 6 символа.');
+    if (pass !== confirm) return showError('Паролите не съвпадат.');
+    setLoading('registerBtn', true, 'Започни безплатно →');
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      await db.collection('users').doc(cred.user.uid).set({
+        name, email,
+        trialStartDate: firebase.firestore.FieldValue.serverTimestamp(),
+        isPaid: false,
+        isAdmin: false,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      window.location.href = 'app.html';
+    } catch (e) {
+      setLoading('registerBtn', false, 'Започни безплатно →');
+      showError(fbError(e.code));
+    }
+  }
+
+  async function resetPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return showError('Въведи имейл адреса си в полето.');
+    try {
+      await auth.sendPasswordResetEmail(email);
+      showSuccess('Изпратихме имейл за смяна на паролата.');
+    } catch (e) { showError(fbError(e.code)); }
+  }
+
+  function fbError(code) {
+    const map = {
+      'auth/user-not-found': 'Не е намерен акаунт с този имейл.',
+      'auth/wrong-password': 'Грешна парола.',
+      'auth/invalid-credential': 'Грешен имейл или парола.',
+      'auth/email-already-in-use': 'Вече съществува акаунт с този имейл.',
+      'auth/invalid-email': 'Невалиден имейл адрес.',
+      'auth/weak-password': 'Паролата е твърде слаба.',
+      'auth/too-many-requests': 'Твърде много опити. Опитай по-късно.',
+      'auth/operation-not-allowed': 'Email/Password входът не е активиран в Firebase.',
+      'auth/network-request-failed': 'Проблем с мрежата. Провери интернет връзката.',
+      'auth/configuration-not-found': 'Грешна Firebase конфигурация.',
+    };
+    return map[code] || `Грешка [${code}]. Съобщи кода.`;
+  }
+
+  auth.onAuthStateChanged(user => { if (user) window.location.href = 'app.html'; });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') activeTab === 'login' ? login() : register();
+  });
+</script>
+</body>
+</html>
