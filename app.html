@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitStart</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png.jpg">
+  <meta name="theme-color" content="#E53935">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="FitStart">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #E53935; --red-dk: #B71C1C; --red-glow: rgba(229,57,53,0.18);
+      --bg: #0D0D0D; --card: #1A1A1A; --card2: #242424;
+      --border: #2A2A2A; --text: #FFFFFF; --muted: #9E9E9E;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; overflow-x: hidden; }
+    .hidden { display: none !important; }
+
+    /* ── Loading ── */
+    #loadingScreen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 20px; }
+    .load-logo { font-size: 34px; font-weight: 900; }
+    .load-logo span { color: var(--red); }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Trial expired ── */
+    #expiredOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.96); display: none; align-items: center; justify-content: center; z-index: 500; padding: 24px; }
+    #expiredOverlay.show { display: flex; }
+    .expired-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 44px 28px; text-align: center; max-width: 360px; width: 100%; }
+    .expired-card h2 { font-size: 22px; font-weight: 900; margin-bottom: 10px; color: var(--red); }
+    .expired-card p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 28px; }
+    .btn-logout-sm { background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: underline; }
+
+    /* ── Shared layout ── */
+    .app-header { padding: 52px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
+    .header-logo { font-size: 22px; font-weight: 900; }
+    .header-logo span { color: var(--red); }
+    .trial-badge { background: var(--red-glow); color: var(--red); border: 1px solid rgba(229,57,53,0.35); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; }
+    .trial-badge.warning { background: rgba(255,152,0,0.15); color: #ffb74d; border-color: rgba(255,152,0,0.3); }
+    .page { padding: 0 16px 20px; }
+    .view-title { font-size: 26px; font-weight: 900; margin-bottom: 3px; }
+    .view-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+    .section-title { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
+
+    /* ── HOME ── */
+    .home-hi { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+    .home-quote { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 18px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px 8px; text-align: center; }
+    .stat-val { font-size: 24px; font-weight: 900; color: var(--red); }
+    .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; font-weight: 600; line-height: 1.3; }
+
+    .today-card { background: linear-gradient(135deg,#1E1E1E 0%,#2A1010 100%); border: 1px solid rgba(229,57,53,0.3); border-radius: 20px; padding: 18px; margin-bottom: 20px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .today-card:active { opacity: 0.9; }
+    .tc-badge { background: var(--red); color: #fff; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 8px; display: inline-block; margin-bottom: 10px; letter-spacing: 0.3px; }
+    .tc-day { font-size: 19px; font-weight: 900; margin-bottom: 4px; }
+    .tc-muscles { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    .tc-btn { width: 100%; background: var(--red); color: #fff; border: none; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: 'Inter', sans-serif; }
+
+    .qa-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .qa-btn { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.2s; }
+    .qa-btn:active { border-color: var(--red); }
+    .qa-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--red-glow); display: flex; align-items: center; justify-content: center; color: var(--red); }
+    .qa-label { font-size: 14px; font-weight: 700; }
+    .qa-sub { font-size: 11px; color: var(--muted); }
+
+    /* ── SCHEDULE ── */
+    .type-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .type-tab { flex: 1; padding: 12px 8px; border-radius: 12px; font-size: 13px; font-weight: 700; text-align: center; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.2s; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .type-tab.active { background: var(--red); border-color: var(--red); color: #fff; }
+    .plan-desc { background: rgba(229,57,53,0.07); border: 1px solid rgba(229,57,53,0.2); border-radius: 14px; padding: 12px 14px; font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .day-list { display: flex; flex-direction: column; gap: 10px; }
+    .day-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.2s; }
+    .day-card:active { opacity: 0.85; }
+    .day-card.today-card { border-color: rgba(229,57,53,0.5); }
+    .day-card.rest-card { opacity: 0.55; pointer-events: none; }
+    .day-badge { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; flex-shrink: 0; background: var(--card2); color: var(--muted); }
+    .today-card .day-badge { background: var(--red); color: #fff; }
+    .day-card-info { flex: 1; min-width: 0; }
+    .day-card-name { font-size: 15px; font-weight: 800; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
+    .today-tag { background: var(--red); color: #fff; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 5px; }
+    .day-card-muscles { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+    .day-card-count { font-size: 12px; color: var(--red); font-weight: 700; }
+    .day-card-count.rest-lbl { color: var(--muted); font-weight: 400; }
+    .day-chevron { color: var(--muted); flex-shrink: 0; }
+
+    /* ── DAY VIEW ── */
+    .day-topbar { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
+    .back-btn { background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; color: var(--text); cursor: pointer; font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .day-view-title { font-size: 18px; font-weight: 900; flex: 1; min-width: 0; }
+    .day-type-tag { border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .tag-gym  { background: rgba(229,57,53,0.15); color: var(--red); border: 1px solid rgba(229,57,53,0.3); }
+    .tag-home { background: rgba(33,150,243,0.15); color: #64b5f6; border: 1px solid rgba(33,150,243,0.3); }
+    .day-muscles-lbl { color: var(--red); font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+    .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .meta-badge { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+    .ex-list { display: flex; flex-direction: column; gap: 10px; }
+    .ex-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .ex-card.all-done { border-color: rgba(76,175,80,0.35); }
+    .ex-card-header { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .ex-thumb { width: 66px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--card2); cursor: pointer; transition: opacity 0.18s; -webkit-tap-highlight-color: transparent; }
+    .ex-thumb:active { opacity: 0.7; }
+    .ex-num { width: 26px; height: 26px; border-radius: 7px; background: var(--red-glow); color: var(--red); font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ex-card.all-done .ex-num { background: rgba(76,175,80,0.2); color: #81c784; }
+    .ex-info { flex: 1; min-width: 0; }
+    .ex-name { font-size: 14px; font-weight: 800; margin-bottom: 3px; }
+    .ex-card.all-done .ex-name { color: var(--muted); text-decoration: line-through; }
+    .ex-muscle { font-size: 12px; color: var(--muted); }
+    .ex-chevron { color: var(--muted); flex-shrink: 0; transition: transform 0.22s; }
+    .ex-card.collapsed .ex-chevron { transform: rotate(-90deg); }
+    .ex-body { border-top: 1px solid var(--border); }
+    .ex-card.collapsed .ex-body { display: none; }
+    .set-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .set-row:last-child { border-bottom: none; }
+    .set-lbl { font-size: 10px; font-weight: 900; border-radius: 6px; padding: 4px 8px; min-width: 72px; text-align: center; flex-shrink: 0; }
+    .lbl-warmup { background: rgba(255,152,0,0.15); color: #FFB74D; border: 1px solid rgba(255,152,0,0.3); }
+    .lbl-working { background: var(--red-glow); color: #EF9A9A; border: 1px solid rgba(229,57,53,0.3); }
+    .lbl-done    { background: rgba(76,175,80,0.15); color: #81c784; border: 1px solid rgba(76,175,80,0.3); }
+    .set-reps { font-size: 13px; font-weight: 800; min-width: 78px; flex-shrink: 0; }
+    .set-desc { font-size: 12px; color: var(--muted); flex: 1; }
+    .set-check { width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.18s; background: transparent; }
+    .set-check.done { background: #4CAF50; border-color: #4CAF50; }
+    /* ── Image modal ── */
+    #imgModal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 400; padding: 24px; }
+    #imgModal.show { display: flex; }
+    .img-modal-inner { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 20px 16px 18px; max-width: 380px; width: 100%; position: relative; }
+    .img-modal-close { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.08); border: none; color: var(--text); width: 34px; height: 34px; border-radius: 50%; font-size: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    #imgModalImg { width: 100%; border-radius: 14px; max-height: 340px; object-fit: contain; display: block; background: var(--card2); }
+    .img-modal-name { text-align: center; font-weight: 800; font-size: 15px; margin-top: 14px; }
+
+    /* ── PROGRESS ── */
+    .streak-card { background: linear-gradient(135deg,#1E1E1E 0%,#2A1010 100%); border: 1px solid rgba(229,57,53,0.3); border-radius: 20px; padding: 28px 20px; text-align: center; margin-bottom: 16px; }
+    .streak-num { font-size: 64px; font-weight: 900; color: var(--red); line-height: 1; }
+    .streak-lbl { font-size: 14px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+    .prog-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+    .prog-box-title { font-size: 14px; font-weight: 800; margin-bottom: 14px; }
+    .week-cal { display: flex; gap: 5px; justify-content: space-between; }
+    .wday-col { flex: 1; text-align: center; }
+    .wday-name { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+    .wday-dot { width: 100%; aspect-ratio: 1; border-radius: 8px; background: var(--card2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; max-width: 36px; margin: 0 auto; }
+    .wday-dot.done { background: var(--red); border-color: var(--red); }
+    .wday-dot.today { border-color: var(--red); }
+    .type-bar-item { margin-bottom: 12px; }
+    .type-bar-item:last-child { margin-bottom: 0; }
+    .type-bar-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .type-bar-name { font-size: 13px; font-weight: 700; }
+    .type-bar-count { font-size: 13px; color: var(--muted); }
+    .bar-track { height: 8px; background: var(--card2); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--red); border-radius: 4px; transition: width 0.6s ease; }
+    .bar-fill.home { background: #1565C0; }
+
+    /* ── WEIGHT ── */
+    .weight-form-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 20px; }
+    .weight-form-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; }
+    .weight-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .weight-input { flex: 1; background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-size: 18px; font-weight: 700; font-family: 'Inter', sans-serif; outline: none; text-align: center; }
+    .weight-input:focus { border-color: var(--red); }
+    .weight-input::placeholder { color: var(--muted); font-weight: 400; font-size: 14px; }
+    .weight-unit { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 16px; font-weight: 800; color: var(--muted); flex-shrink: 0; }
+    .btn-save-w { width: 100%; background: var(--red); color: #fff; border: none; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-save-w:active { background: var(--red-dk); }
+    .weight-list { display: flex; flex-direction: column; gap: 8px; }
+    .weight-entry { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .w-date { font-size: 13px; color: var(--muted); }
+    .w-val { font-size: 20px; font-weight: 900; }
+    .w-val span { font-size: 12px; color: var(--muted); font-weight: 400; }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+    /* ── PROFILE ── */
+    .profile-avatar { width: 76px; height: 76px; border-radius: 50%; background: var(--red-glow); border: 2px solid rgba(229,57,53,0.4); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 900; color: var(--red); margin: 0 auto 10px; }
+    .profile-name { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+    .profile-email { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px; }
+    .profile-section { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 12px; }
+    .pitem { display: flex; align-items: center; gap: 14px; padding: 15px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--card2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pitem-text { flex: 1; }
+    .pitem-label { font-size: 14px; font-weight: 700; }
+    .pitem-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .pitem-val { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .btn-logout { width: 100%; background: rgba(229,57,53,0.1); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 16px; padding: 16px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-logout:active { background: rgba(229,57,53,0.2); }
+
+    /* ── PLACEHOLDER ── */
+    .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 55vh; text-align: center; padding: 40px 20px; }
+    .placeholder-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .placeholder-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .soon-badge { background: var(--red-glow); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 800; margin-top: 16px; display: inline-block; }
+    .placeholder svg { opacity: 0.25; margin-bottom: 16px; }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(13,13,13,0.97); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-around; padding: 8px 0 14px; z-index: 200; backdrop-filter: blur(20px); }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 6px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: 'Inter', sans-serif; transition: color 0.2s; -webkit-tap-highlight-color: transparent; flex: 1; }
+    .nav-btn.active { color: var(--red); }
+    .nav-btn span { font-size: 9px; font-weight: 700; letter-spacing: 0.1px; }
+
+    @media (max-width: 380px) {
+      .set-desc { display: none; }
+      .ex-thumb { width: 56px; height: 62px; }
+      .nav-btn span { font-size: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="load-logo">Fit<span>Start</span></div>
+  <div class="spinner"></div>
+</div>
+
+<div id="expiredOverlay">
+  <div class="expired-card">
+    <h2>Пробният период изтече</h2>
+    <p>Твоят 7-дневен безплатен период приключи.<br>Свържи се с администратора за да продължиш.</p>
+    <button class="btn-logout-sm" onclick="logout()">Изход от акаунта</button>
+  </div>
+</div>
+
+<!-- ── Exercise image modal ── -->
+<div id="imgModal" onclick="closeImgModal()">
+  <div class="img-modal-inner" onclick="event.stopPropagation()">
+    <button class="img-modal-close" onclick="closeImgModal()">&#x2715;</button>
+    <img id="imgModalImg" src="" alt="">
+    <div id="imgModalName" class="img-modal-name"></div>
+  </div>
+</div>
+
+<div id="appWrap" class="hidden">
+
+  <!-- ═══════ HOME ═══════ -->
+  <div id="viewHome">
+    <div class="app-header">
+      <div class="header-logo">Fit<span>Start</span></div>
+      <div id="trialBadge" class="trial-badge" style="display:none"></div>
+    </div>
+    <div class="page">
+      <div class="home-hi" id="homeHi">Здравей! 👋</div>
+      <div class="home-quote">"Всяка тренировка те доближава по-близо до целта."</div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="statWeek">0</div><div class="stat-lbl">Тази<br>седмица</div></div>
+        <div class="stat-card"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Общо<br>тренировки</div></div>
+        <div class="stat-card"><div class="stat-val" id="statStreak">0</div><div class="stat-lbl">Дни<br>серия</div></div>
+      </div>
+
+      <div class="today-card" onclick="goToToday()">
+        <div class="tc-badge">ДНЕШНА ТРЕНИРОВКА</div>
+        <div class="tc-day" id="tcDay">—</div>
+        <div class="tc-muscles" id="tcMuscles">—</div>
+        <button class="tc-btn" id="tcBtn">Виж детайли</button>
+      </div>
+
+      <div class="qa-title">Бързи действия</div>
+      <div class="qa-grid">
+        <div class="qa-btn" onclick="switchView('schedule')">
+          <div class="qa-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="qa-label">Тренировки</div>
+          <div class="qa-sub">Седмичен план</div>
+        </div>
+        <div class="qa-btn" onclick="switchView('progress')">
+          <div class="qa-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="qa-label">Прогрес</div>
+          <div class="qa-sub">Серия и статистика</div>
+        </div>
+        <div class="qa-btn" onclick="switchView('weight')">
+          <div class="qa-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-2 13H5L3 6z"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/></svg>
+          </div>
+          <div class="qa-label">Тегло</div>
+          <div class="qa-sub">Проследяване</div>
+        </div>
+        <div class="qa-btn" onclick="switchView('profile')">
+          <div class="qa-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="qa-label">Профил</div>
+          <div class="qa-sub">Настройки</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ SCHEDULE ═══════ -->
+  <div id="viewSchedule" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Тренировки</div>
+      <div class="view-subtitle">Твоят седмичен план</div>
+      <div class="type-tabs">
+        <button class="type-tab active" id="tabGym" onclick="switchType('gym')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M4 9h2M18 9h2M4 15h2M18 15h2"/></svg>
+          Фитнес Зала
+        </button>
+        <button class="type-tab" id="tabHome" onclick="switchType('home')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          У Дома
+        </button>
+      </div>
+      <div class="plan-desc" id="planDesc">Програма за изграждане на сила, мускулна маса и дефиниция. 3 сета × 8-12 повторения, 60-90 сек почивка.</div>
+      <div class="section-title">Седмичен план</div>
+      <div class="day-list" id="dayList"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ DAY VIEW ═══════ -->
+  <div id="viewDay" class="hidden">
+    <div class="page" style="padding-top:54px">
+      <div class="day-topbar">
+        <button class="back-btn" onclick="backFromDay()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Назад
+        </button>
+        <div class="day-view-title" id="dayTitle"></div>
+        <div id="dayTypeTag" class="day-type-tag tag-gym"></div>
+      </div>
+      <div class="day-muscles-lbl" id="dayMuscles"></div>
+      <div class="meta-row" id="metaRow"></div>
+      <div class="section-title">Упражнения</div>
+      <div class="ex-list" id="exList"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ EXERCISES ═══════ -->
+  <div id="viewExercises" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Упражнения</div>
+      <div class="placeholder">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M4 9h2M18 9h2M4 15h2M18 15h2"/></svg>
+        <div class="placeholder-title">Библиотека упражнения</div>
+        <div class="placeholder-text">Пълна база данни с упражнения, техника и видеа — за всяка мускулна група.</div>
+        <div class="soon-badge">Очаквайте скоро</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ FOOD ═══════ -->
+  <div id="viewFood" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Хранене</div>
+      <div class="placeholder">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <div class="placeholder-title">Хранителен дневник</div>
+        <div class="placeholder-text">Проследявай калории, протеин и макронутриенти всеки ден.</div>
+        <div class="soon-badge">Очаквайте скоро</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ PROGRESS ═══════ -->
+  <div id="viewProgress" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Прогрес</div>
+      <div class="view-subtitle">Твоята статистика</div>
+
+      <div class="streak-card">
+        <div class="streak-num" id="progStreak">0</div>
+        <div class="streak-lbl">Дни серия</div>
+      </div>
+
+      <div class="prog-box">
+        <div class="prog-box-title">Последните 7 дни</div>
+        <div class="week-cal" id="weekCal"></div>
+      </div>
+
+      <div class="prog-box">
+        <div class="prog-box-title">По Тип</div>
+        <div class="type-bar-item">
+          <div class="type-bar-labels">
+            <span class="type-bar-name">Фитнес Зала</span>
+            <span class="type-bar-count" id="barGymLbl">0 тренировки</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="barGym" style="width:0%"></div></div>
+        </div>
+        <div class="type-bar-item" style="margin-top:12px">
+          <div class="type-bar-labels">
+            <span class="type-bar-name">У Дома</span>
+            <span class="type-bar-count" id="barHomeLbl">0 тренировки</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill home" id="barHome" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ WEIGHT ═══════ -->
+  <div id="viewWeight" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Тегло</div>
+      <div class="view-subtitle">Проследи теглото си</div>
+
+      <div class="weight-form-card">
+        <div class="weight-form-title">Запиши тегло</div>
+        <div class="weight-row">
+          <input type="number" id="weightInput" class="weight-input" placeholder="напр. 75.5" step="0.1" min="30" max="300" />
+          <div class="weight-unit">кг</div>
+        </div>
+        <button class="btn-save-w" onclick="saveWeight()">Запиши</button>
+      </div>
+
+      <div class="section-title">История</div>
+      <div id="weightList" class="weight-list">
+        <div class="empty-state">Няма записи</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ PROFILE ═══════ -->
+  <div id="viewProfile" class="hidden">
+    <div class="app-header"><div class="header-logo">Fit<span>Start</span></div></div>
+    <div class="page">
+      <div class="view-title">Профил</div>
+      <br>
+      <div class="profile-avatar" id="profAvatar">?</div>
+      <div class="profile-name" id="profName">—</div>
+      <div class="profile-email" id="profEmail">—</div>
+      <div class="profile-section">
+        <div class="pitem">
+          <div class="pitem-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="pitem-text">
+            <div class="pitem-label">Статус</div>
+            <div class="pitem-sub" id="profStatus">—</div>
+          </div>
+          <div class="pitem-val" id="profDays"></div>
+        </div>
+        <div class="pitem">
+          <div class="pitem-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="pitem-text">
+            <div class="pitem-label">Тренировки тази седмица</div>
+            <div class="pitem-sub">Фитнес Зала + У Дома</div>
+          </div>
+          <div class="pitem-val" id="profWeek">0</div>
+        </div>
+        <div class="pitem">
+          <div class="pitem-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="pitem-text">
+            <div class="pitem-label">Всички тренировки</div>
+            <div class="pitem-sub">От начало</div>
+          </div>
+          <div class="pitem-val" id="profTotal">0</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Изход от акаунта</button>
+    </div>
+  </div>
+
+  <!-- ═══════ BOTTOM NAV ═══════ -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="navHome" onclick="switchView('home')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Начало</span>
+    </button>
+    <button class="nav-btn" id="navSchedule" onclick="switchView('schedule')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Тренировки</span>
+    </button>
+    <button class="nav-btn" id="navExercises" onclick="switchView('exercises')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M4 9h2M18 9h2M4 15h2M18 15h2"/></svg>
+      <span>Упражнения</span>
+    </button>
+    <button class="nav-btn" id="navFood" onclick="switchView('food')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      <span>Хранене</span>
+    </button>
+    <button class="nav-btn" id="navProgress" onclick="switchView('progress')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Прогрес</span>
+    </button>
+    <button class="nav-btn" id="navWeight" onclick="switchView('weight')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-2 13H5L3 6z"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/></svg>
+      <span>Тегло</span>
+    </button>
+    <button class="nav-btn" id="navProfile" onclick="switchView('profile')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Профил</span>
+    </button>
+  </nav>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:            "AIzaSyCjWrp7bo3fH87wEBWXzH8_bK61B5wXbU4",
+  authDomain:        "fitstart-app-55afd.firebaseapp.com",
+  projectId:         "fitstart-app-55afd",
+  storageBucket:     "fitstart-app-55afd.firebasestorage.app",
+  messagingSenderId: "203416819949",
+  appId:             "1:203416819949:web:04e0ae7e415243242d54e4"
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ─── Exercise data (img auto = img/<id>.png) ─────────────────────────────
+const SCHEDULES = {
+  gym: {
+    1: { name:'Понеделник', short:'Пон', emoji:'🏋', type:'Фитнес Зала', muscles:'Гърди, Рамене, Гърб', rest:'60-90 сек', exercises:[
+      { id:'m1',  name:'Лежанка с дъмбели',             muscle:'Гърди',           sets:3, reps:'8-12'  },
+      { id:'m2',  name:'Бутане за гради',                muscle:'Гърди',           sets:3, reps:'10-12' },
+      { id:'m3',  name:'Молитва',                        muscle:'Гърди',           sets:3, reps:'12-15' },
+      { id:'m4',  name:'Горен скрипец',                  muscle:'Гърб',            sets:3, reps:'10-12' },
+      { id:'m5',  name:'Гребане на машина',              muscle:'Гърб',            sets:3, reps:'10-12' },
+      { id:'m6',  name:'Кофички',                        muscle:'Гърди / Трицепс', sets:3, reps:'10-12' },
+      { id:'m7',  name:'Задно рамо пек дек',             muscle:'Рамене задни',    sets:3, reps:'12-15' },
+      { id:'m8',  name:'Латерал рейсес на машина',       muscle:'Рамене',          sets:3, reps:'12-15' },
+      { id:'m9',  name:'Кърша с лост',                   muscle:'Гърб',            sets:3, reps:'10-12' },
+      { id:'m10', name:'Кърлс обърнати за предмишница',  muscle:'Предмишница',     sets:3, reps:'15-20' },
+      { id:'m11', name:'Дигане на колена',               muscle:'Корем',           sets:3, reps:'15-20' },
+    ]},
+    2: { name:'Вторник', short:'Вт', emoji:'🦵', type:'Фитнес Зала', muscles:'Крака и Корем', rest:'90-120 сек', exercises:[
+      { id:'t1', name:'Клек',             muscle:'Крака',          sets:4, reps:'10-12' },
+      { id:'t2', name:'Лег преса',        muscle:'Квадрицепс',     sets:3, reps:'12-15' },
+      { id:'t3', name:'Лег екстеншъни',   muscle:'Квадрицепс',     sets:3, reps:'12-15' },
+      { id:'t4', name:'Лег кърлс',        muscle:'Бицепс феморис', sets:3, reps:'12-15' },
+      { id:'t5', name:'Румънска тяга',    muscle:'Задно бедро',    sets:3, reps:'10-12' },
+      { id:'t6', name:'Прасец на машина', muscle:'Прасци',         sets:4, reps:'15-20' },
+      { id:'t7', name:'Трапец с дъмбели', muscle:'Трапец',         sets:3, reps:'15-20' },
+      { id:'t8', name:'Корем на машина',  muscle:'Корем',          sets:3, reps:'15-20' },
+      { id:'t9', name:'Молитва',          muscle:'Корем',          sets:3, reps:'15-20' },
+    ]},
+    3: { name:'Сряда',     short:'Ср',  emoji:'🧘', type:'Почивка',     muscles:'Почивка / Кардио',              rest:null, exercises:[] },
+    4: { name:'Четвъртък', short:'Чет', emoji:'🏋', type:'Фитнес Зала', muscles:'Гърди, Гръб, Рамене и Бицепс', rest:'60-90 сек', exercises:[
+      { id:'th1',  name:'Лежанка',                    muscle:'Гърди',      sets:4, reps:'8-10'  },
+      { id:'th2',  name:'Пет Дек',                    muscle:'Гърди',      sets:3, reps:'12-15' },
+      { id:'th3',  name:'Молитва',                    muscle:'Гърди',      sets:3, reps:'12-15' },
+      { id:'th4',  name:'Набирания',                  muscle:'Гърб',       sets:4, reps:'8-12'  },
+      { id:'th5',  name:'Хиперектензии за гръб',      muscle:'Долен гръб', sets:3, reps:'12-15' },
+      { id:'th6',  name:'Дигане на колена',           muscle:'Корем',      sets:3, reps:'15-20' },
+      { id:'th7',  name:'Латерал рейсес на машина',   muscle:'Рамене',     sets:3, reps:'12-15' },
+      { id:'th8',  name:'Латерал рейсес с дъмбели',   muscle:'Рамене',     sets:3, reps:'12-15' },
+      { id:'th9',  name:'Чукове за бицепс с дъмбели', muscle:'Бицепс',     sets:3, reps:'12-15' },
+      { id:'th10', name:'Натискане на трицепс',        muscle:'Трицепс',    sets:3, reps:'12-15' },
+    ]},
+    5: { name:'Петък', short:'Пет', emoji:'🦵', type:'Фитнес Зала', muscles:'Крака, Трапец и Корем', rest:'90-120 сек', exercises:[
+      { id:'f1', name:'Лег преса нормална',       muscle:'Квадрицепс',     sets:4, reps:'10-12' },
+      { id:'f2', name:'Лег преса за задни бедра', muscle:'Задно бедро',    sets:3, reps:'12-15' },
+      { id:'f3', name:'Лег екстеншъни',           muscle:'Квадрицепс',     sets:3, reps:'12-15' },
+      { id:'f4', name:'Лег кърлс',                muscle:'Бицепс феморис', sets:3, reps:'12-15' },
+      { id:'f5', name:'Румънска тяга',            muscle:'Задно бедро',    sets:3, reps:'10-12' },
+      { id:'f6', name:'Прасец на машина',         muscle:'Прасци',         sets:4, reps:'15-20' },
+      { id:'f7', name:'Трапец с дъмбели',         muscle:'Трапец',         sets:3, reps:'15-20' },
+      { id:'f8', name:'Корем на машина',          muscle:'Корем',          sets:3, reps:'15-20' },
+      { id:'f9', name:'Молитва',                  muscle:'Корем',          sets:3, reps:'15-20' },
+    ]},
+    6: { name:'Събота', short:'Съб', emoji:'🚴', type:'Кардио',  muscles:'Кардио и гъвкавост', rest:null, exercises:[] },
+    0: { name:'Неделя', short:'Нед', emoji:'😴', type:'Почивка', muscles:'Пълна почивка',       rest:null, exercises:[] },
+  },
+  home: {
+    1: { name:'Понеделник', short:'Пон', emoji:'💪', type:'У Дома', muscles:'Гърди и Трицепс', rest:'45-60 сек', exercises:[
+      { id:'hm1', name:'Лицеви опори',            muscle:'Гърди',   sets:4, reps:'15-20' },
+      { id:'hm2', name:'Диамантени лицеви опори', muscle:'Трицепс', sets:3, reps:'12-15' },
+      { id:'hm3', name:'Широки лицеви опори',     muscle:'Гърди',   sets:3, reps:'15'    },
+    ]},
+    2: { name:'Вторник', short:'Вт', emoji:'💪', type:'У Дома', muscles:'Гърб и Бицепс', rest:'60-90 сек', exercises:[
+      { id:'ht1', name:'Набирания',         muscle:'Гърб',   sets:4, reps:'6-10' },
+      { id:'ht2', name:'Обратни набирания', muscle:'Бицепс', sets:3, reps:'8-12' },
+    ]},
+    3: { name:'Сряда', short:'Ср', emoji:'🏃', type:'У Дома', muscles:'Цяло тяло', rest:'45-60 сек', exercises:[
+      { id:'hw1', name:'Бурпита',             muscle:'Цяло тяло',   sets:4, reps:'10'     },
+      { id:'hw2', name:'Клекания',            muscle:'Крака',       sets:4, reps:'20-25'  },
+      { id:'hw3', name:'Планк',               muscle:'Корем',       sets:3, reps:'60 сек' },
+      { id:'hw4', name:'Мост за задно бедро', muscle:'Задно бедро', sets:3, reps:'20'     },
+    ]},
+    4: { name:'Четвъртък', short:'Чет', emoji:'💪', type:'У Дома', muscles:'Рамене и Ядро', rest:'45-60 сек', exercises:[
+      { id:'hth1', name:'Пайк лицеви опори', muscle:'Рамене', sets:3, reps:'12'     },
+      { id:'hth2', name:'Планк',             muscle:'Корем',  sets:3, reps:'60 сек' },
+      { id:'hth3', name:'Руски туист',       muscle:'Корем',  sets:3, reps:'20'     },
+      { id:'hth4', name:'Обратни кранчета',  muscle:'Корем',  sets:3, reps:'20'     },
+    ]},
+    5: { name:'Петък', short:'Пет', emoji:'🦵', type:'У Дома', muscles:'Крака и Прасци', rest:'45-60 сек', exercises:[
+      { id:'hf1', name:'Клекания на един крак', muscle:'Квадрицепс', sets:3, reps:'10 на крак' },
+      { id:'hf2', name:'Изпади',                muscle:'Крака',      sets:3, reps:'12 на крак' },
+      { id:'hf3', name:'Повдигане на прасци',   muscle:'Прасци',     sets:4, reps:'25'          },
+    ]},
+    6: { name:'Събота', short:'Съб', emoji:'🧘', type:'Почивка', muscles:'Активна почивка', rest:null, exercises:[] },
+    0: { name:'Неделя', short:'Нед', emoji:'😴', type:'Почивка', muscles:'Пълна почивка',   rest:null, exercises:[] },
+  }
+};
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let currentUser  = null;
+let userData     = null;
+let scheduleType = 'gym';
+let currentView  = 'home';
+let prevView     = 'schedule'; // view to return to from day
+let currentDayIdx = null;
+let completedSets = {};
+let collapsedCards = new Set();
+let weightEntries  = [];
+let stats = { week:0, total:0, streak:0, gym:0, home:0 };
+
+// ─── Auth helpers ────────────────────────────────────────────────────────────
+function logout() { auth.signOut().then(() => window.location.href = 'login.html'); }
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+const ALL_VIEWS = ['home','schedule','exercises','food','progress','weight','profile'];
+
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function switchView(view) {
+  ALL_VIEWS.forEach(v => document.getElementById('view'+cap(v)).classList.add('hidden'));
+  document.getElementById('viewDay').classList.add('hidden');
+  document.getElementById('view'+cap(view)).classList.remove('hidden');
+  currentView = view;
+
+  const navMap = { home:'navHome', schedule:'navSchedule', exercises:'navExercises',
+                   food:'navFood',  progress:'navProgress',  weight:'navWeight', profile:'navProfile' };
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (navMap[view]) document.getElementById(navMap[view]).classList.add('active');
+
+  window.scrollTo(0,0);
+  if (view === 'schedule')  renderSchedule();
+  if (view === 'progress')  renderProgress();
+  if (view === 'weight')    renderWeightList();
+  if (view === 'profile')   renderProfile();
+  if (view === 'home')      updateHome();
+}
+
+function backFromDay() {
+  document.getElementById('viewDay').classList.add('hidden');
+  const target = prevView === 'home' ? 'home' : 'schedule';
+  document.getElementById('view'+cap(target)).classList.remove('hidden');
+  currentView = target;
+  currentDayIdx = null;
+  collapsedCards.clear();
+  window.scrollTo(0,0);
+}
+
+// ─── Home ────────────────────────────────────────────────────────────────────
+function goToToday() {
+  const todayIdx = new Date().getDay();
+  prevView = 'home';
+  openDay(todayIdx, 'gym');
+}
+
+function updateHome() {
+  const todayIdx = new Date().getDay();
+  const day = SCHEDULES['gym'][todayIdx];
+
+  if (currentUser) {
+    const raw   = userData?.name || currentUser.displayName || currentUser.email || '';
+    const first = raw.includes('@') ? raw.split('@')[0] : raw.split(' ')[0];
+    document.getElementById('homeHi').textContent = `Здравей, ${first}! 👋`;
+    document.getElementById('profAvatar').textContent = (first[0]||'?').toUpperCase();
+  }
+
+  document.getElementById('statWeek').textContent   = stats.week;
+  document.getElementById('statTotal').textContent  = stats.total;
+  document.getElementById('statStreak').textContent = stats.streak;
+
+  if (day && day.exercises.length > 0) {
+    document.getElementById('tcDay').textContent     = `${day.emoji} ${day.name}`;
+    document.getElementById('tcMuscles').textContent = day.muscles;
+    document.getElementById('tcBtn').textContent     = 'Започни тренировката →';
+  } else if (day) {
+    document.getElementById('tcDay').textContent     = `${day.emoji} ${day.name}`;
+    document.getElementById('tcMuscles').textContent = day.muscles;
+    document.getElementById('tcBtn').textContent     = 'Виж детайли';
+  }
+}
+
+// ─── Schedule ────────────────────────────────────────────────────────────────
+function switchType(type) {
+  scheduleType = type;
+  document.getElementById('tabGym').classList.toggle('active',  type === 'gym');
+  document.getElementById('tabHome').classList.toggle('active', type === 'home');
+  document.getElementById('planDesc').textContent = type === 'gym'
+    ? 'Програма за изграждане на сила, мускулна маса и дефиниция. 3 сета × 8-12 повторения, 60-90 сек почивка.'
+    : 'Тренировки без оборудване — навсякъде, по всяко време. Bodyweight програма за цяло тяло.';
+  renderSchedule();
+}
+
+function renderSchedule() {
+  const todayIdx = new Date().getDay();
+  const sched    = SCHEDULES[scheduleType];
+  const list     = document.getElementById('dayList');
+  list.innerHTML = '';
+  [1,2,3,4,5,6,0].forEach(idx => {
+    const day    = sched[idx];
+    const isToday = idx === todayIdx;
+    const isRest  = day.exercises.length === 0;
+    const card = document.createElement('div');
+    card.className = 'day-card'+(isToday?' today-card':'')+(isRest?' rest-card':'');
+    card.innerHTML = `
+      <div class="day-badge">${day.short}</div>
+      <div class="day-card-info">
+        <div class="day-card-name">${day.name}${isToday?'<span class="today-tag">ДНЕС</span>':''}</div>
+        <div class="day-card-muscles">${day.muscles}</div>
+        <div class="day-card-count ${isRest?'rest-lbl':''}">${isRest ? day.type : day.exercises.length+' упражнения'}</div>
+      </div>
+      ${!isRest?`<svg class="day-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`:''}
+    `;
+    if (!isRest) card.onclick = () => { prevView='schedule'; openDay(idx, scheduleType); };
+    list.appendChild(card);
+  });
+}
+
+// ─── Day View ────────────────────────────────────────────────────────────────
+async function openDay(dayIdx, type) {
+  const t   = type || scheduleType;
+  const day = SCHEDULES[t][dayIdx];
+  currentDayIdx = dayIdx;
+  scheduleType  = t;
+  collapsedCards.clear();
+
+  ALL_VIEWS.forEach(v => document.getElementById('view'+cap(v)).classList.add('hidden'));
+  document.getElementById('viewDay').classList.remove('hidden');
+
+  document.getElementById('dayTitle').textContent    = `${day.emoji||''} ${day.name}`;
+  document.getElementById('dayMuscles').textContent  = day.muscles;
+  const tag = document.getElementById('dayTypeTag');
+  tag.textContent  = day.type;
+  tag.className    = 'day-type-tag '+(t === 'home' ? 'tag-home' : 'tag-gym');
+
+  document.getElementById('metaRow').innerHTML = `
+    <div class="meta-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M4 9h2M18 9h2M4 15h2M18 15h2"/></svg>
+      ${day.exercises.length} упражнения
+    </div>
+    ${day.rest?`<div class="meta-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      ${day.rest} почивка
+    </div>`:''}
+    <div class="meta-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Сета: 3-4
+    </div>
+  `;
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('navSchedule').classList.add('active');
+  window.scrollTo(0,0);
+
+  await loadSets(dayIdx);
+  renderExercises(day);
+}
+
+function logKey(dayIdx) {
+  const d    = new Date();
+  const diff = dayIdx - d.getDay();
+  const t    = new Date(d);
+  t.setDate(d.getDate() + diff);
+  return `${scheduleType}_${t.toISOString().split('T')[0]}`;
+}
+
+async function loadSets(dayIdx) {
+  if (!currentUser) return;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).collection('logs').doc(logKey(dayIdx)).get();
+    completedSets = doc.exists ? (doc.data().sets || {}) : {};
+  } catch(e) { completedSets = {}; }
+}
+
+async function saveSets(dayIdx) {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('logs').doc(logKey(dayIdx)).set({
+      sets: completedSets, type: scheduleType, dayIdx,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('users').doc(currentUser.uid).update({
+      lastActive: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.error(e); }
+}
+
+function makeSets(sets, reps) {
+  const isTime = String(reps).includes('сек');
+  const rows   = [{ label:'ЗАГРЯВКА', reps: isTime?'30 сек':'10 повт.', desc:'Загрявка — леки кг', type:'warmup' }];
+  for (let i = 1; i < sets; i++) {
+    rows.push({ label:`СЕТ ${i}`, reps: isTime?reps:`${reps} повт.`, desc:'До отказ', type:'working' });
+  }
+  return rows;
+}
+
+function renderExercises(day) {
+  const list = document.getElementById('exList');
+  list.innerHTML = '';
+  day.exercises.forEach((ex, i) => {
+    const rows   = makeSets(ex.sets, ex.reps);
+    const done   = rows.filter((_,si) => completedSets[`${ex.id}_${si}`]).length;
+    const allDone = done === rows.length;
+    const collapsed = collapsedCards.has(ex.id);
+    const IMG_MAP = {
+      'm1':'img/m1.png (2).png','m2':'img/m2.png (2).png','m3':'img/m3.png (2).png',
+      'm4':'img/m4.png (2).png','m5':'img/m5.png (2).png','m6':'img/m6.png.png',
+      'm7':'img/m7.png (2).png','m8':'img/m8.png (2).png','m9':'img/m9.png (2).png',
+      'm10':'img/m10.png (2).png','m11':'img/m11.png.png'
+    };
+    const img = IMG_MAP[ex.id] || `img/${ex.id}.png.png`;
+
+    const setsHTML = rows.map((s, si) => {
+      const isDone = !!completedSets[`${ex.id}_${si}`];
+      const lbl = isDone ? 'lbl-done' : s.type==='warmup' ? 'lbl-warmup' : 'lbl-working';
+      return `<div class="set-row">
+        <span class="set-lbl ${lbl}">${s.label}</span>
+        <span class="set-reps">${s.reps}</span>
+        <span class="set-desc">${s.desc}</span>
+        <div class="set-check ${isDone?'done':''}" onclick="toggleSet(event,'${ex.id}',${si})">
+          ${isDone?`<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'ex-card'+(allDone?' all-done':'')+(collapsed?' collapsed':'');
+    card.id = `card_${ex.id}`;
+    card.innerHTML = `
+      <div class="ex-card-header" onclick="toggleCollapse('${ex.id}')">
+        <img class="ex-thumb" src="${img}" alt="${ex.name}" onerror="this.style.opacity='0.12'" onclick="showExImg(event,'${img}','${ex.name}')">
+        <div class="ex-num">${i+1}</div>
+        <div class="ex-info">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-muscle">${ex.muscle}</div>
+        </div>
+        <svg class="ex-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="ex-body">
+        ${setsHTML}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function toggleCollapse(id) {
+  collapsedCards.has(id) ? collapsedCards.delete(id) : collapsedCards.add(id);
+  document.getElementById(`card_${id}`).classList.toggle('collapsed');
+}
+
+function showExImg(e, src, name) {
+  e.stopPropagation();
+  document.getElementById('imgModalImg').src = src;
+  document.getElementById('imgModalName').textContent = name;
+  document.getElementById('imgModal').classList.add('show');
+}
+
+function closeImgModal() {
+  document.getElementById('imgModal').classList.remove('show');
+  document.getElementById('imgModalImg').src = '';
+}
+
+function toggleSet(e, id, si) {
+  e.stopPropagation();
+  completedSets[`${id}_${si}`] = !completedSets[`${id}_${si}`];
+  const day = SCHEDULES[scheduleType][currentDayIdx];
+  if (day) renderExercises(day);
+  saveSets(currentDayIdx);
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  if (!currentUser) return;
+  try {
+    const snap  = await db.collection('users').doc(currentUser.uid).collection('logs').get();
+    const today = new Date();
+    const weekStart = new Date(today);
+    const dow = today.getDay();
+    weekStart.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    weekStart.setHours(0,0,0,0);
+
+    let weekCount=0, totalCount=0, gymCount=0, homeCount=0;
+    const workoutDates = new Set();
+
+    snap.forEach(doc => {
+      const d    = doc.data();
+      const sets = d.sets || {};
+      if (!Object.values(sets).some(v=>v===true)) return;
+      totalCount++;
+      const parts   = doc.id.split('_');
+      const logType = parts[0];
+      const dateStr = parts.slice(1).join('_');
+      if (logType === 'gym')  gymCount++;
+      if (logType === 'home') homeCount++;
+      workoutDates.add(dateStr);
+      const logDate = new Date(dateStr);
+      if (logDate >= weekStart) weekCount++;
+    });
+
+    // streak
+    let streak = 0;
+    const cur = new Date(today);
+    for (let i = 0; i < 365; i++) {
+      const ds = cur.toISOString().split('T')[0];
+      if (workoutDates.has(ds)) { streak++; cur.setDate(cur.getDate()-1); }
+      else if (i === 0)          { cur.setDate(cur.getDate()-1); }
+      else break;
+    }
+
+    stats = { week:weekCount, total:totalCount, streak, gym:gymCount, home:homeCount };
+  } catch(e) { console.error(e); }
+}
+
+// ─── Progress View ───────────────────────────────────────────────────────────
+async function renderProgress() {
+  document.getElementById('progStreak').textContent = stats.streak;
+
+  // Weekly calendar
+  const cal = document.getElementById('weekCal');
+  cal.innerHTML = '';
+  const today = new Date();
+  const dayNames = ['Нд','Пн','Вт','Ср','Чт','Пт','Съ'];
+
+  let snap2;
+  try { snap2 = await db.collection('users').doc(currentUser.uid).collection('logs').get(); }
+  catch(e) { snap2 = {forEach:()=>{}}; }
+
+  const wDates = new Set();
+  snap2.forEach(doc => {
+    const d = doc.data(); const sets = d.sets||{};
+    if (Object.values(sets).some(v=>v===true)) {
+      const parts = doc.id.split('_'); wDates.add(parts.slice(1).join('_'));
+    }
+  });
+
+  for (let i=6; i>=0; i--) {
+    const d  = new Date(today); d.setDate(today.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const isDone  = wDates.has(ds);
+    const isToday = i === 0;
+    const col = document.createElement('div');
+    col.className = 'wday-col';
+    col.innerHTML = `
+      <div class="wday-name">${dayNames[d.getDay()]}</div>
+      <div class="wday-dot${isDone?' done':''}${isToday&&!isDone?' today':''}">
+        ${isDone?`<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+      </div>`;
+    cal.appendChild(col);
+  }
+
+  const total = stats.gym + stats.home || 1;
+  const gymPct  = Math.round(stats.gym  / total * 100);
+  const homePct = Math.round(stats.home / total * 100);
+  document.getElementById('barGymLbl').textContent  = `${stats.gym} тренировки`;
+  document.getElementById('barHomeLbl').textContent = `${stats.home} тренировки`;
+  document.getElementById('barGym').style.width   = gymPct + '%';
+  document.getElementById('barHome').style.width  = homePct + '%';
+}
+
+// ─── Weight ───────────────────────────────────────────────────────────────────
+async function loadWeightEntries() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+      .collection('weight').orderBy('date','desc').limit(30).get();
+    weightEntries = snap.docs.map(d => ({id:d.id,...d.data()}));
+  } catch(e) { weightEntries = []; }
+}
+
+function renderWeightList() {
+  const list = document.getElementById('weightList');
+  if (!weightEntries.length) {
+    list.innerHTML = '<div class="empty-state">Няма записи</div>'; return;
+  }
+  list.innerHTML = weightEntries.map(e => {
+    const d    = e.date ? new Date(e.date.seconds*1000) : new Date();
+    const dStr = d.toLocaleDateString('bg-BG',{day:'2-digit',month:'short',year:'numeric'});
+    return `<div class="weight-entry"><div class="w-date">${dStr}</div><div class="w-val">${e.weight} <span>кг</span></div></div>`;
+  }).join('');
+}
+
+async function saveWeight() {
+  const inp = document.getElementById('weightInput');
+  const val = parseFloat(inp.value);
+  if (!val || val < 30 || val > 300) {
+    inp.style.borderColor = 'var(--red)';
+    setTimeout(()=>inp.style.borderColor='var(--border)',1500); return;
+  }
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('weight').add({
+      weight: val, date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    inp.value = '';
+    await loadWeightEntries();
+    renderWeightList();
+  } catch(e) { console.error(e); }
+}
+
+// ─── Profile ─────────────────────────────────────────────────────────────────
+function renderProfile() {
+  if (!currentUser || !userData) return;
+  const raw   = userData.name || currentUser.displayName || currentUser.email || '';
+  const first = raw.includes('@') ? raw.split('@')[0] : raw.split(' ')[0];
+  document.getElementById('profName').textContent  = raw || currentUser.email;
+  document.getElementById('profEmail').textContent = currentUser.email;
+  document.getElementById('profAvatar').textContent = (first[0]||'?').toUpperCase();
+
+  const trialStart  = userData.trialStartDate ? userData.trialStartDate.toDate() : new Date();
+  const daysPassed  = Math.floor((Date.now()-trialStart.getTime())/86400000);
+  const daysLeft    = Math.max(0, 7-daysPassed);
+
+  if (userData.isPaid) {
+    document.getElementById('profStatus').textContent = 'Платен абонамент';
+    document.getElementById('profDays').textContent   = '✓ Активен';
+  } else {
+    document.getElementById('profStatus').textContent = `Пробен период`;
+    document.getElementById('profDays').textContent   = `${daysLeft}д остават`;
+  }
+  document.getElementById('profWeek').textContent  = stats.week;
+  document.getElementById('profTotal').textContent = stats.total;
+}
+
+// ─── Trial badge ─────────────────────────────────────────────────────────────
+function updateTrialBadge(daysLeft, isPaid) {
+  const badge = document.getElementById('trialBadge');
+  if (isPaid) { badge.style.display='none'; return; }
+  badge.style.display = '';
+  badge.textContent   = daysLeft <= 2 ? `${daysLeft}д остават` : `${daysLeft}д trial`;
+  badge.className     = 'trial-badge'+(daysLeft<=2?' warning':'');
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    let doc = await db.collection('users').doc(user.uid).get();
+    if (!doc.exists) {
+      await db.collection('users').doc(user.uid).set({
+        name: user.displayName||'', email: user.email||'',
+        trialStartDate: firebase.firestore.FieldValue.serverTimestamp(),
+        isPaid:false, isAdmin:false,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+      });
+      doc = await db.collection('users').doc(user.uid).get();
+    }
+    userData = doc.data();
+
+    const trialStart = userData.trialStartDate ? userData.trialStartDate.toDate() : new Date();
+    const daysPassed = Math.floor((Date.now()-trialStart.getTime())/86400000);
+    const daysLeft   = Math.max(0, 7-daysPassed);
+
+    updateTrialBadge(daysLeft, userData.isPaid);
+    await loadStats();
+    await loadWeightEntries();
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appWrap').classList.remove('hidden');
+
+    if (daysLeft === 0 && !userData.isPaid) {
+      document.getElementById('expiredOverlay').classList.add('show'); return;
+    }
+
+    updateHome();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loadingScreen').style.display = 'none';
+    window.location.href = 'login.html';
+  }
+});
+</script>
+</body>
+</html>

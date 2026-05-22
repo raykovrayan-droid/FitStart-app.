@@ -1,0 +1,24 @@
+{
+  "name": "FitStart",
+  "short_name": "FitStart",
+  "description": "Твоят личен фитнес асистент",
+  "start_url": "/app.html",
+  "display": "standalone",
+  "background_color": "#0D0D0D",
+  "theme_color": "#E53935",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
